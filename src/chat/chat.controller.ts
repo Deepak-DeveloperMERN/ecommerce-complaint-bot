@@ -1,5 +1,6 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { randomUUID } from 'crypto';
 
 @Controller('chat')
 export class ChatController {
@@ -10,12 +11,28 @@ export class ChatController {
     @Body('sessionId') sessionId: string,
     @Body('message') message: string,
   ) {
-    if (!sessionId || !message) {
-      return { error: 'sessionId and message are required' };
+    // 🔹 Validate message
+    if (!message || message.trim().length === 0) {
+      throw new BadRequestException('Message is required');
     }
 
-    const reply = await this.chatService.handleMessage(sessionId, message);
+    if (message.length > 1000) {
+      throw new BadRequestException('Message too long');
+    }
 
-    return { reply };
+    // 🔹 Generate sessionId if not provided
+    if (!sessionId) {
+      sessionId = randomUUID();
+    }
+
+    const reply = await this.chatService.handleMessage(
+      sessionId,
+      message.trim(),
+    );
+
+    return {
+      sessionId,
+      reply,
+    };
   }
 }
